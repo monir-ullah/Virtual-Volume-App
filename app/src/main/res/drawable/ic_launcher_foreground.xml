@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Speaker Drop Shadow -->
+    <path
+        android:fillColor="#40000000"
+        android:pathData="M 26.5,45 H 32.5 L 44.5,34.2 C 46.1,32.8 48.5,34 48.5,36.2 V 71.8 C 48.5,74 46.1,75.2 44.5,73.8 L 32.5,63 H 26.5 C 24.8,63 23.5,61.7 23.5,60 V 48 C 23.5,46.3 24.8,45 26.5,45 Z" />
+
+    <!-- Speaker Body (Vibrant White) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 25,43 H 31 L 43,32.2 C 44.6,30.8 47,32 47,34.2 V 69.8 C 47,72 44.6,73.2 43,71.8 L 31,61 H 25 C 23.3,61 22,59.7 22,58 V 46 C 22,44.3 23.3,43 25,43 Z" />
+
+    <!-- Speaker Inner Cone Detail / Highlight -->
+    <path
+        android:fillColor="#1500E5FF"
+        android:pathData="M 31,43 L 43,32.2 C 44.6,30.8 47,32 47,34.2 V 69.8 C 47,72 44.6,73.2 43,71.8 L 31,61 Z" />
+
+    <!-- Sound Waves (Vibrant Cyan #00E5FF) -->
+    <!-- Wave 1 (Small) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M 52,42.5 C 56.5,47.5 56.5,54.5 52,59.5" />
+
+    <!-- Wave 2 (Medium) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M 58,36.5 C 64.8,43.5 64.8,58.5 58,65.5" />
+
+    <!-- Wave 3 (Large) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#80E8FF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M 64,30.5 C 73,40.5 73,61.5 64,71.5" />
+
+    <!-- Lock Badge Shadow -->
+    <path
+        android:fillColor="#50000000"
+        android:pathData="M68,65m-16,0a16,16 0 1,0 32,0a16,16 0 1,0 -32,0" />
+
+    <!-- Lock Badge White Outer Ring -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M67,63m-16,0a16,16 0 1,0 32,0a16,16 0 1,0 -32,0" />
+
+    <!-- Lock Badge Red Circle Fill (#FF1744 to #D50000 Gradient) -->
+    <path android:pathData="M67,63m-14.2,0a14.2,14.2 0 1,0 28.4,0a14.2,14.2 0 1,0 -28.4,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="67"
+                android:startY="48.8"
+                android:endX="67"
+                android:endY="77.2"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF2A55" />
+                <item android:offset="0.5" android:color="#FF1744" />
+                <item android:offset="1.0" android:color="#C50023" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Padlock Shackle (White Loop) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:pathData="M 63.2,56.5 V 54.5 C 63.2,52.4 64.9,50.7 67,50.7 C 69.1,50.7 70.8,52.4 70.8,54.5 V 56.5" />
+
+    <!-- Padlock Body (Solid White Rectangle with Rounded Corners) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 62.5,56 H 71.5 C 72.6,56 73.5,56.9 73.5,58 V 66 C 73.5,67.1 72.6,68 71.5,68 H 62.5 C 61.4,68 60.5,67.1 60.5,66 V 58 C 60.5,56.9 61.4,56 62.5,56 Z" />
+
+    <!-- Padlock Keyhole (Dark Crimson) -->
+    <path
+        android:fillColor="#B71C1C"
+        android:pathData="M 67,59 C 66.1,59 65.3,59.8 65.3,60.7 C 65.3,61.3 65.6,61.9 66.1,62.2 V 64 C 66.1,64.5 66.5,64.9 67,64.9 C 67.5,64.9 67.9,64.5 67.9,64 V 62.2 C 68.4,61.9 68.7,61.3 68.7,60.7 C 68.7,59.8 67.9,59 67,59 Z" />
+
+</vector>

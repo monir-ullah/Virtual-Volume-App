@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Base Indigo/Teal Dark Gradient Surface (#232738 -> #1A1C29 -> #10121A) -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#232738" />
+                <item android:offset="0.5" android:color="#1A1C29" />
+                <item android:offset="1.0" android:color="#10121A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Vibrant Teal Radial Glow from Top Left -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="36"
+                android:centerY="36"
+                android:gradientRadius="72"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#3000E5FF" />
+                <item android:offset="0.5" android:color="#1200E5FF" />
+                <item android:offset="1.0" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle Red Radial Glow from Bottom Right -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="72"
+                android:centerY="72"
+                android:gradientRadius="54"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#25FF1744" />
+                <item android:offset="0.6" android:color="#0AFF1744" />
+                <item android:offset="1.0" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle Modern Geometric Overlay (Grid and Concentric Circles) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0CFFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M0,18 H108 M0,36 H108 M0,54 H108 M0,72 H108 M0,90 H108 M18,0 V108 M36,0 V108 M54,0 V108 M72,0 V108 M90,0 V108" />
+
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#1800E5FF"
+        android:strokeWidth="1.2"
+        android:pathData="M54,18 A36,36 0 1,0 54,90 A36,36 0 1,0 54,18 Z" />
+
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0DFFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M54,9 A45,45 0 1,0 54,99 A45,45 0 1,0 54,9 Z" />
+
+    <!-- Angled Tech Accent Lines -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#1500E5FF"
+        android:strokeWidth="1"
+        android:pathData="M18,90 L90,18" />
+</vector>

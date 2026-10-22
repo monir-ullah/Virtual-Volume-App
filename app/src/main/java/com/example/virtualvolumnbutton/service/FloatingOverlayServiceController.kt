@@ -1,0 +1,14 @@
+package com.example.virtualvolumnbutton.service
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+object FloatingOverlayServiceController {
+    private val _isServiceRunning = MutableStateFlow(false)
+    val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
+
+    fun setRunning(running: Boolean) {
+        _isServiceRunning.value = running
+    }
+}
