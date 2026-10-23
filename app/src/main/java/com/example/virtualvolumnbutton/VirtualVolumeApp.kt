@@ -6,6 +6,7 @@ import com.example.virtualvolumnbutton.data.model.AudioStreamType
 import com.example.virtualvolumnbutton.data.repository.VolumeRepository
 import com.example.virtualvolumnbutton.data.repository.VolumeRepositoryImpl
 import com.example.virtualvolumnbutton.engine.VolumeLockEngine
+import com.example.virtualvolumnbutton.service.FloatingOverlayService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -85,5 +86,8 @@ class VirtualVolumeApp : Application() {
             // Step 4: Begin real-time background volume monitoring
             volumeLockEngine.start(applicationScope)
         }
+
+        // Step 5: Synchronize unified foreground service state
+        FloatingOverlayService.syncServiceState(this)
     }
 }

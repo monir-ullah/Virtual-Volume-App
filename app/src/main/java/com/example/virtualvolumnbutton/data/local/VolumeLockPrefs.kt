@@ -39,6 +39,16 @@ class VolumeLockPrefs(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_IS_MASTER_LOCKED, value).apply()
 
     /**
+     * Gets or sets whether the floating overlay button is currently enabled by user preference.
+     *
+     * - `get()`: Reads boolean flag from preferences (defaults to `false` if not set).
+     * - `set()`: Saves boolean flag asynchronously to preferences.
+     */
+    var isOverlayEnabled: Boolean
+        get() = prefs.getBoolean(KEY_IS_OVERLAY_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_IS_OVERLAY_ENABLED, value).apply()
+
+    /**
      * Retrieves the set of currently locked audio streams.
      *
      * @return A set of [AudioStreamType] enums. If none are saved, defaults to all available streams.
@@ -130,6 +140,7 @@ class VolumeLockPrefs(context: Context) {
         // Key constants used for SharedPreferences lookups
         private const val PREFS_NAME = "volume_lock_prefs"
         private const val KEY_IS_MASTER_LOCKED = "is_master_locked"
+        private const val KEY_IS_OVERLAY_ENABLED = "is_overlay_enabled"
         private const val KEY_LOCKED_STREAMS = "locked_streams"
         private const val KEY_PREFIX_VOLUME = "locked_volume_"
     }

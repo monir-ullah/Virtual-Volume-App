@@ -2,18 +2,16 @@ package com.example.virtualvolumnbutton.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.virtualvolumnbutton.VirtualVolumeApp
+import com.example.virtualvolumnbutton.data.local.VolumeLockPrefs
 import com.example.virtualvolumnbutton.data.model.AudioStreamType
 import com.example.virtualvolumnbutton.data.model.VolumeStreamState
 import com.example.virtualvolumnbutton.data.repository.VolumeRepository
 import com.example.virtualvolumnbutton.data.repository.VolumeRepositoryImpl
 import com.example.virtualvolumnbutton.engine.VolumeLockEngine
 import com.example.virtualvolumnbutton.service.FloatingOverlayService
-import com.example.virtualvolumnbutton.service.FloatingOverlayServiceController
 import com.example.virtualvolumnbutton.util.PermissionHelper
 import com.example.virtualvolumnbutton.util.findActivity
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +27,7 @@ import kotlinx.coroutines.launch
  * @property volumeStates Map of audio streams to their volume level snapshots.
  * @property isMasterLockActive True if master volume lock is active.
  * @property lockedStreams Set of audio streams currently locked.
- * @property isFloatingServiceEnabled True if the floating overlay button service is running.
+ * @property isFloatingServiceEnabled True if the floating overlay button preference is enabled.
  * @property hasOverlayPermission True if system overlay draw permission ("Display over other apps") is granted.
  * @property hasNotificationPolicyPermission True if Notification Policy Access (Do Not Disturb permission) is granted.
  */
@@ -57,19 +55,21 @@ data class MainUiState(
  *
  * HOW IT WORKS:
  * - Uses Kotlin `combine` operators to reactively merge volume state flows, lock status flows,
- *   floating service controller flows, and permission flows into `uiState`.
+ *   overlay preference flows, and permission flows into `uiState`.
  * - Uses `stateIn` with `SharingStarted.WhileSubscribed(5000)` to automatically pause processing
  *   when the UI screen goes into background to conserve battery.
  */
 class MainViewModel @JvmOverloads constructor(
     application: Application,
     private val volumeRepository: VolumeRepository = (application as? VirtualVolumeApp)?.volumeRepository ?: VolumeRepositoryImpl(application),
-    private val volumeLockEngine: VolumeLockEngine = (application as? VirtualVolumeApp)?.volumeLockEngine ?: VolumeLockEngine(volumeRepository)
+    private val volumeLockEngine: VolumeLockEngine = (application as? VirtualVolumeApp)?.volumeLockEngine ?: VolumeLockEngine(volumeRepository),
+    private val volumeLockPrefs: VolumeLockPrefs = (application as? VirtualVolumeApp)?.volumeLockPrefs ?: VolumeLockPrefs(application)
 ) : AndroidViewModel(application) {
 
-    // Internal state flows for system permission statuses
+    // Internal state flows for system permission statuses and overlay preference
     private val _hasOverlayPermission = MutableStateFlow(false)
     private val _hasNotificationPolicyPermission = MutableStateFlow(false)
+    private val _isOverlayEnabled = MutableStateFlow(volumeLockPrefs.isOverlayEnabled)
 
     // Flow combining overlay and notification policy permissions into a pair
     private val permissionsFlow = combine(
@@ -93,14 +93,14 @@ class MainViewModel @JvmOverloads constructor(
     val uiState: StateFlow<MainUiState> = combine(
         volumeRepository.volumeStates,
         lockStateFlow,
-        FloatingOverlayServiceController.isServiceRunning,
+        _isOverlayEnabled,
         permissionsFlow
-    ) { volumeStates, lockState, isServiceRunning, permissions ->
+    ) { volumeStates, lockState, isOverlayEnabled, permissions ->
         MainUiState(
             volumeStates = volumeStates,
             isMasterLockActive = lockState.first,
             lockedStreams = lockState.second,
-            isFloatingServiceEnabled = isServiceRunning,
+            isFloatingServiceEnabled = isOverlayEnabled,
             hasOverlayPermission = permissions.first,
             hasNotificationPolicyPermission = permissions.second
         )
@@ -124,7 +124,7 @@ class MainViewModel @JvmOverloads constructor(
             }
         }
 
-        // Step 3: Query initial permission status
+        // Step 3: Query initial permission status and overlay preference
         refreshPermissions()
     }
 
@@ -135,6 +135,7 @@ class MainViewModel @JvmOverloads constructor(
         val context = getApplication<Application>()
         _hasOverlayPermission.value = PermissionHelper.hasOverlayPermission(context)
         _hasNotificationPolicyPermission.value = PermissionHelper.hasNotificationPolicyAccess(context)
+        _isOverlayEnabled.value = volumeLockPrefs.isOverlayEnabled
     }
 
     /**
@@ -175,6 +176,8 @@ class MainViewModel @JvmOverloads constructor(
         } else {
             volumeLockEngine.disableLock()
         }
+        volumeLockPrefs.isMasterLocked = enabled
+        FloatingOverlayService.syncServiceState(getApplication())
     }
 
     /**
@@ -188,32 +191,18 @@ class MainViewModel @JvmOverloads constructor(
         } else {
             volumeLockEngine.lockStream(streamType)
         }
+        FloatingOverlayService.syncServiceState(getApplication())
     }
 
     /**
-     * Starts or stops the [FloatingOverlayService] foreground service.
+     * Enables or disables the floating overlay service preference and synchronizes service state.
      *
-     * @param enabled `true` to start floating overlay button service, `false` to stop.
+     * @param enabled `true` to enable floating overlay button preference, `false` to disable.
      */
     fun setFloatingServiceEnabled(enabled: Boolean) {
-        val context = getApplication<Application>()
-        if (enabled) {
-            if (PermissionHelper.hasOverlayPermission(context)) {
-                val intent = Intent(context, FloatingOverlayService::class.java).apply {
-                    action = FloatingOverlayService.ACTION_START
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
-            }
-        } else {
-            val intent = Intent(context, FloatingOverlayService::class.java).apply {
-                action = FloatingOverlayService.ACTION_STOP
-            }
-            context.startService(intent)
-        }
+        volumeLockPrefs.isOverlayEnabled = enabled
+        _isOverlayEnabled.value = enabled
+        FloatingOverlayService.syncServiceState(getApplication())
     }
 
     /**
@@ -230,17 +219,13 @@ class MainViewModel @JvmOverloads constructor(
      * @param context Application or Activity context.
      */
     fun exitAppAndStopServices(context: Context) {
-        // Stop floating overlay service
-        val intent = Intent(context, FloatingOverlayService::class.java).apply {
-            action = FloatingOverlayService.ACTION_STOP
-        }
-        context.stopService(intent)
-
-        // Disable volume lock engine
+        volumeLockPrefs.isOverlayEnabled = false
+        _isOverlayEnabled.value = false
         volumeLockEngine.disableLock()
         volumeLockEngine.stop()
 
-        // Finish activity and remove task from Android recent apps stack
+        FloatingOverlayService.syncServiceState(getApplication())
+
         context.findActivity()?.finishAndRemoveTask()
     }
 }

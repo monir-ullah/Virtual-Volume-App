@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  * - Extends Android's [TileService].
  * - In [onStartListening], subscribes to [com.example.virtualvolumnbutton.engine.VolumeLockEngine.isLockActive]
  *   to update the tile UI dynamically whenever lock status changes.
- * - In [onClick], toggles master lock state, updates preferences, and refreshes tile UI.
+ * - In [onClick], toggles master lock state, updates preferences, refreshes tile UI, and syncs foreground service state.
  */
 class VolumeLockTileService : TileService() {
 
@@ -105,6 +105,9 @@ class VolumeLockTileService : TileService() {
 
         // Refresh tile UI state instantly
         updateTileState(newLockState)
+
+        // Synchronize unified foreground service state
+        FloatingOverlayService.syncServiceState(applicationContext)
     }
 
     /**

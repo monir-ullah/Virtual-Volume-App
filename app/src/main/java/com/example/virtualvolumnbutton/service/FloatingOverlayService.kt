@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
@@ -14,6 +15,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -24,6 +26,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.virtualvolumnbutton.MainActivity
 import com.example.virtualvolumnbutton.VirtualVolumeApp
+import com.example.virtualvolumnbutton.data.local.VolumeLockPrefs
 import com.example.virtualvolumnbutton.data.repository.VolumeRepositoryImpl
 import com.example.virtualvolumnbutton.engine.VolumeLockEngine
 import com.example.virtualvolumnbutton.ui.components.FloatingOverlayContent
@@ -31,23 +34,18 @@ import com.example.virtualvolumnbutton.ui.theme.VirtualVolumnButtonTheme
 import com.example.virtualvolumnbutton.util.PermissionHelper
 
 /**
- * Android [Service] that draws a moveable floating virtual volume button overlay on top of all other apps.
+ * Android [Service] that maintains a Foreground Service process for background volume protection
+ * and draws a moveable floating virtual volume button overlay on top of all other apps.
  *
  * WHAT IT DOES:
- * - Runs as a Foreground Service showing a persistent status bar notification ("Virtual Volume Overlay").
- * - Inflates a floating window view using Android's [WindowManager] system service.
- * - Embeds modern Jetpack Compose UI ([FloatingOverlayContent]) inside the window overlay.
- * - Allows dragging the floating button across the screen and adjusting volume levels without switching apps.
+ * - Runs as a Foreground Service showing a persistent status bar notification.
+ * - Dynamically attaches or removes the floating window view using Android's [WindowManager].
+ * - When overlay is disabled but volume lock is active, keeps the Foreground Service process alive
+ *   to guarantee CPU priority and wakefulness for [VolumeLockEngine].
  *
  * WHY IT EXISTS:
- * - Provides an accessible on-screen virtual volume control for users with broken hardware volume buttons
- *   or users who prefer touching on-screen controls while gaming, watching videos, or reading.
- *
- * HOW IT WORKS:
- * - Obtains [WindowManager] and sets layout parameters (`TYPE_APPLICATION_OVERLAY`, `FLAG_NOT_FOCUSABLE`).
- * - Implements [LifecycleOwner] and [SavedStateRegistryOwner] to properly attach Jetpack Compose views
- *   to a Service lifecycle without throwing runtime crashes.
- * - Updates window parameters (`params.x`, `params.y`) dynamically on drag gestures.
+ * - Provides an accessible on-screen virtual volume control and prevents Android OS from killing
+ *   background volume lock monitoring when the app is minimized.
  */
 class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
@@ -61,9 +59,19 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
 
+    private var isOverlayWindowAttached: Boolean = false
     private lateinit var windowManager: WindowManager
     private var overlayView: ComposeView? = null
     private lateinit var params: WindowManager.LayoutParams
+
+    private val app: VirtualVolumeApp?
+        get() = application as? VirtualVolumeApp
+
+    private val volumeLockPrefs: VolumeLockPrefs
+        get() = app?.volumeLockPrefs ?: VolumeLockPrefs(this)
+
+    private val volumeLockEngine: VolumeLockEngine
+        get() = app?.volumeLockEngine ?: VolumeLockEngine(app?.volumeRepository ?: VolumeRepositoryImpl(this), volumeLockPrefs)
 
     override fun onCreate() {
         super.onCreate()
@@ -76,15 +84,14 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         // Step 2: Mark floating service as active in global controller
         FloatingOverlayServiceController.setRunning(true)
 
-        // Step 3: Setup notification channel & start foreground service
+        // Step 3: Initialize window manager
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+
+        // Step 4: Setup notification channel
         createNotificationChannel()
-        startForegroundServiceWithNotification()
 
-        // Step 4: Ensure background volume lock engine is active
+        // Step 5: Ensure background volume lock engine is active
         ensureVolumeLockEngineStarted()
-
-        // Step 5: Draw floating overlay on screen
-        setupOverlayView()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -95,9 +102,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             }
             else -> {
                 ensureVolumeLockEngineStarted()
-                if (overlayView == null) {
-                    setupOverlayView()
-                }
+                updateServiceState()
             }
         }
         return START_STICKY // Restart service if system kills it unexpectedly
@@ -106,7 +111,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        // Step 1: Remove overlay view from screen
+        // Step 1: Remove overlay view from screen if attached
         removeOverlayView()
 
         // Step 2: Teardown lifecycle
@@ -120,6 +125,38 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
     }
 
     /**
+     * Updates notification content text dynamically based on active features
+     * and manages overlay window attachment to WindowManager.
+     */
+    private fun updateServiceState() {
+        val isLocked = volumeLockEngine.isLockActive.value || volumeLockPrefs.isMasterLocked
+        val isOverlayEnabled = volumeLockPrefs.isOverlayEnabled
+        val hasPermission = PermissionHelper.hasOverlayPermission(this)
+        val isOverlayActive = isOverlayEnabled && hasPermission
+
+        // Update notification content text based on active features
+        val notificationText = when {
+            isLocked && isOverlayActive -> "Volume Lock & Floating Overlay active"
+            isLocked -> "Volume Lock active"
+            isOverlayActive -> "Floating Overlay active"
+            else -> "Volume Service active"
+        }
+
+        startForegroundServiceWithNotification(notificationText)
+
+        // Attach overlay window if enabled and permitted; remove if disabled
+        if (isOverlayActive) {
+            if (!isOverlayWindowAttached || overlayView == null) {
+                setupOverlayView()
+            }
+        } else {
+            if (isOverlayWindowAttached || overlayView != null) {
+                removeOverlayView()
+            }
+        }
+    }
+
+    /**
      * Creates a notification channel required for foreground services on Android 8.0 (API 26) and above.
      */
     private fun createNotificationChannel() {
@@ -129,7 +166,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                 "Floating Volume Service",
                 NotificationManager.IMPORTANCE_LOW // Low priority avoids annoying sound alerts
             ).apply {
-                description = "Notification for virtual volume button floating overlay service"
+                description = "Notification for volume lock and floating button overlay service"
                 setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
@@ -139,8 +176,10 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
 
     /**
      * Promotes this service to a Foreground Service with an ongoing notification.
+     *
+     * @param contentText Dynamic status notification message.
      */
-    private fun startForegroundServiceWithNotification() {
+    private fun startForegroundServiceWithNotification(contentText: String) {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -150,8 +189,8 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         )
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Virtual Volume Overlay")
-            .setContentText("Touch volume controls active on screen")
+            .setContentTitle("Virtual Volume")
+            .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -180,8 +219,6 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             return
         }
 
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-
         // Select correct overlay window type based on Android OS version
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -195,9 +232,6 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutType,
-            // FLAG_NOT_FOCUSABLE: Allows touches outside the floating widget to reach underlying apps
-            // FLAG_LAYOUT_IN_SCREEN: Allows placing overlay anywhere on screen
-            // FLAG_NOT_TOUCH_MODAL: Prevents overlay from capturing touches outside its bounds
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -208,13 +242,8 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             y = 300 // Default initial Y position on screen
         }
 
-        // Retrieve shared application instances
-        val app = application as? VirtualVolumeApp
-        val volumeRepository = app?.volumeRepository ?: VolumeRepositoryImpl(this)
-        val volumeLockEngine = app?.volumeLockEngine ?: VolumeLockEngine(volumeRepository)
-        app?.let {
-            it.volumeLockEngine.start(it.applicationScope)
-        }
+        val repository = app?.volumeRepository ?: VolumeRepositoryImpl(this)
+        val engine = app?.volumeLockEngine ?: VolumeLockEngine(repository, volumeLockPrefs)
 
         // Create ComposeView and bind Service lifecycle
         overlayView = ComposeView(this).apply {
@@ -224,13 +253,14 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             setContent {
                 VirtualVolumnButtonTheme {
                     FloatingOverlayContent(
-                        volumeRepository = volumeRepository,
-                        volumeLockEngine = volumeLockEngine,
+                        volumeRepository = repository,
+                        volumeLockEngine = engine,
                         onDrag = { dx, dy ->
                             updateOverlayPosition(dx, dy) // Dragging gesture callback
                         },
                         onCloseService = {
-                            stopSelf() // Close floating service button
+                            volumeLockPrefs.isOverlayEnabled = false
+                            syncServiceState(this@FloatingOverlayService)
                         }
                     )
                 }
@@ -240,8 +270,11 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         // Add overlay ComposeView to system WindowManager
         try {
             windowManager.addView(overlayView, params)
+            isOverlayWindowAttached = true
         } catch (e: Exception) {
             Log.e("FloatingOverlayService", "Error adding overlay view: ${e.message}")
+            isOverlayWindowAttached = false
+            overlayView = null
         }
     }
 
@@ -273,7 +306,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
     }
 
     /**
-     * Removes the overlay view from the WindowManager when service stops.
+     * Removes the overlay view from the WindowManager if attached.
      */
     private fun removeOverlayView() {
         overlayView?.let { view ->
@@ -284,14 +317,15 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             }
         }
         overlayView = null
+        isOverlayWindowAttached = false
     }
 
     /**
      * Ensures background volume lock engine is active.
      */
     private fun ensureVolumeLockEngineStarted() {
-        val app = application as? VirtualVolumeApp
-        app?.let {
+        val appInstance = application as? VirtualVolumeApp
+        appInstance?.let {
             it.volumeLockEngine.start(it.applicationScope)
         }
     }
@@ -301,5 +335,27 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         const val ACTION_STOP = "com.example.virtualvolumnbutton.action.STOP_OVERLAY"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "floating_overlay_channel"
+
+        /**
+         * Synchronizes foreground service lifecycle based on active features.
+         *
+         * Starts the foreground service if volume lock is active OR floating overlay is enabled.
+         * Stops the foreground service if neither feature is active.
+         */
+        fun syncServiceState(context: Context) {
+            val app = context.applicationContext as? VirtualVolumeApp
+            val prefs = app?.volumeLockPrefs ?: VolumeLockPrefs(context)
+            val engine = app?.volumeLockEngine
+            val isLocked = prefs.isMasterLocked || (engine?.isLockActive?.value == true)
+            val isOverlayEnabled = prefs.isOverlayEnabled
+            val shouldRun = isLocked || isOverlayEnabled
+
+            val intent = Intent(context, FloatingOverlayService::class.java)
+            if (shouldRun) {
+                ContextCompat.startForegroundService(context, intent)
+            } else {
+                context.stopService(intent)
+            }
+        }
     }
 }
