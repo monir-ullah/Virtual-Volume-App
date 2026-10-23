@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -24,12 +25,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -61,6 +66,8 @@ fun VolumeControllerScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    var showExitConfirmationDialog by remember { mutableStateOf(false) }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -72,6 +79,39 @@ fun VolumeControllerScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+    if (showExitConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitConfirmationDialog = false },
+            title = {
+                Text(text = "Exit Virtual Volume?")
+            },
+            text = {
+                Text(text = "Are you sure you want to stop all volume lock services, remove the floating button, and close the application?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showExitConfirmationDialog = false
+                        viewModel.exitAppAndStopServices(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Exit App")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showExitConfirmationDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     VolumeControllerContent(
@@ -88,7 +128,7 @@ fun VolumeControllerScreen(
         onVolumeChange = { streamType, level -> viewModel.setVolume(streamType, level) },
         onMuteToggle = { streamType -> viewModel.toggleMute(streamType) },
         onLockToggle = { streamType -> viewModel.toggleStreamLock(streamType) },
-        onExitApp = { viewModel.exitAppAndStopServices(context) },
+        onExitApp = { showExitConfirmationDialog = true },
         modifier = modifier
     )
 }

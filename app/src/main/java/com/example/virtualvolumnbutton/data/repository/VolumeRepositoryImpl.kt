@@ -19,13 +19,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import java.util.EnumMap
 
 class VolumeRepositoryImpl(
-    private val context: Context
+    context: Context
 ) : VolumeRepository {
 
+    private val appContext: Context = context.applicationContext
+
     private val audioManager =
-        context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    private val cachedVolumeLevels = IntArray(AudioStreamType.entries.size) { -1 }
+    private val cachedVolumeStatesMap = EnumMap<AudioStreamType, VolumeStreamState>(AudioStreamType::class.java)
 
     private val _volumeStates = MutableStateFlow<Map<AudioStreamType, VolumeStreamState>>(emptyMap())
     override val volumeStates: StateFlow<Map<AudioStreamType, VolumeStreamState>> =
@@ -65,13 +71,17 @@ class VolumeRepositoryImpl(
             current == 0
         }
 
-        return VolumeStreamState(
+        cachedVolumeLevels[streamType.ordinal] = current
+
+        val state = VolumeStreamState(
             streamType = streamType,
             currentVolume = current,
             maxVolume = max,
             minVolume = min,
             isMuted = isMuted
         )
+        cachedVolumeStatesMap[streamType] = state
+        return state
     }
 
     override fun setVolume(streamType: AudioStreamType, level: Int, showUi: Boolean) {
@@ -81,6 +91,7 @@ class VolumeRepositoryImpl(
 
         try {
             audioManager.setStreamVolume(streamType.streamType, clampedLevel, flags)
+            cachedVolumeLevels[streamType.ordinal] = clampedLevel
         } catch (e: SecurityException) {
             Log.e("VolumeRepository", "SecurityException setting volume for ${streamType.name}: ${e.message}")
         } catch (e: Exception) {
@@ -106,8 +117,11 @@ class VolumeRepositoryImpl(
     }
 
     override fun refreshVolumeStates() {
-        val updatedMap = AudioStreamType.entries.associateWith { stream ->
-            getVolumeState(stream)
+        val updatedMap = EnumMap<AudioStreamType, VolumeStreamState>(AudioStreamType::class.java)
+        for (stream in AudioStreamType.entries) {
+            val state = getVolumeState(stream)
+            updatedMap[stream] = state
+            cachedVolumeLevels[stream.ordinal] = state.currentVolume
         }
         _volumeStates.value = updatedMap
     }
@@ -131,7 +145,7 @@ class VolumeRepositoryImpl(
         }
 
         val intentFilter = IntentFilter(VOLUME_CHANGED_ACTION)
-        context.registerReceiver(receiver, intentFilter)
+        appContext.registerReceiver(receiver, intentFilter)
 
         val contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
@@ -141,7 +155,7 @@ class VolumeRepositoryImpl(
             }
         }
 
-        context.contentResolver.registerContentObserver(
+        appContext.contentResolver.registerContentObserver(
             Settings.System.CONTENT_URI,
             true,
             contentObserver
@@ -149,12 +163,12 @@ class VolumeRepositoryImpl(
 
         awaitClose {
             try {
-                context.unregisterReceiver(receiver)
+                appContext.unregisterReceiver(receiver)
             } catch (e: Exception) {
                 Log.w("VolumeRepository", "Error unregistering receiver: ${e.message}")
             }
             try {
-                context.contentResolver.unregisterContentObserver(contentObserver)
+                appContext.contentResolver.unregisterContentObserver(contentObserver)
             } catch (e: Exception) {
                 Log.w("VolumeRepository", "Error unregistering contentObserver: ${e.message}")
             }
