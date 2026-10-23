@@ -1,6 +1,5 @@
 package com.example.virtualvolumnbutton.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -21,22 +20,19 @@ private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
+/**
+ * Material Design 3 Theme wrapper for the Virtual Volume Button application.
+ *
+ * WHAT IT DOES:
+ * - Applies custom color schemes, typography, and shapes across the entire Jetpack Compose UI hierarchy.
+ * - Enables Dynamic Color palette generation on Android 12+ (API 31+) derived from the user's wallpaper.
+ * - Falls back cleanly to Material 3 purple theme colors on older Android versions.
+ */
 @Composable
 fun VirtualVolumnButtonTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

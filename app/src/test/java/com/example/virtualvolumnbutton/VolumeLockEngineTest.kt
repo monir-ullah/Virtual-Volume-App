@@ -19,6 +19,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * In-memory fake implementation of [VolumeRepository] for unit testing [VolumeLockEngine] without Android dependencies.
+ */
 class FakeVolumeRepository : VolumeRepository {
     private val volumes = mutableMapOf(
         AudioStreamType.MEDIA to 10,
@@ -63,6 +66,9 @@ class FakeVolumeRepository : VolumeRepository {
         _volumeStates.value = AudioStreamType.entries.associateWith { getVolumeState(it) }
     }
 
+    /**
+     * Simulates an external hardware volume button press or system volume change in tests.
+     */
     suspend fun simulateExternalVolumeChange(streamType: AudioStreamType, newLevel: Int) {
         volumes[streamType] = newLevel
         refreshVolumeStates()
@@ -70,6 +76,9 @@ class FakeVolumeRepository : VolumeRepository {
     }
 }
 
+/**
+ * Unit tests verifying [VolumeLockEngine] logic for locking, overriding external changes, and individual stream controls.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class VolumeLockEngineTest {
 
@@ -98,8 +107,10 @@ class VolumeLockEngineTest {
     fun testExternalVolumeChangeRestoredWhenLocked() = testScope.runTest {
         lockEngine.enableLock()
 
+        // Simulate external volume change on Media stream to level 3
         fakeRepository.simulateExternalVolumeChange(AudioStreamType.MEDIA, 3)
 
+        // Verify lock engine overrides change and restores back to locked level 10
         assertEquals(10, fakeRepository.getVolumeState(AudioStreamType.MEDIA).currentVolume)
     }
 
@@ -110,8 +121,10 @@ class VolumeLockEngineTest {
 
         assertFalse(lockEngine.isLockActive.value)
 
+        // Simulate external volume change when unlocked
         fakeRepository.simulateExternalVolumeChange(AudioStreamType.MEDIA, 3)
 
+        // Verify volume change is accepted
         assertEquals(3, fakeRepository.getVolumeState(AudioStreamType.MEDIA).currentVolume)
     }
 

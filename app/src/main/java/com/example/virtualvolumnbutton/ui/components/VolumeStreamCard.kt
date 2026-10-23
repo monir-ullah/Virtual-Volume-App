@@ -38,6 +38,14 @@ import com.example.virtualvolumnbutton.data.model.AudioStreamType
 import com.example.virtualvolumnbutton.data.model.VolumeStreamState
 import com.example.virtualvolumnbutton.ui.theme.VirtualVolumnButtonTheme
 
+/**
+ * UI Card component displaying controls for a single audio stream category (Media, Ring, Alarm, Notification).
+ *
+ * WHAT IT DOES:
+ * - Displays category label and current volume level ratio text (e.g. "8 / 15").
+ * - Displays mute/unmute toggle button and lock/unlock toggle button.
+ * - Displays a Material 3 [Slider] for smooth touch volume level adjustments.
+ */
 @Composable
 fun VolumeStreamCard(
     streamType: AudioStreamType,
@@ -53,6 +61,7 @@ fun VolumeStreamCard(
     val minVolume = volumeState?.minVolume ?: 0
     val isMuted = volumeState?.isMuted ?: false
 
+    // Select stream category icon
     val icon: ImageVector = when (streamType) {
         AudioStreamType.MEDIA -> Icons.Rounded.MusicNote
         AudioStreamType.RING -> Icons.Rounded.Notifications
@@ -60,6 +69,7 @@ fun VolumeStreamCard(
         AudioStreamType.NOTIFICATION -> Icons.AutoMirrored.Rounded.Message
     }
 
+    // Select volume level dynamic icon
     val volumeIcon: ImageVector = when {
         isMuted || currentVolume == 0 -> Icons.AutoMirrored.Rounded.VolumeOff
         currentVolume < maxVolume / 2 -> Icons.AutoMirrored.Rounded.VolumeDown
@@ -101,7 +111,7 @@ fun VolumeStreamCard(
                         Text(
                             text = streamType.label,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isMuted) "Muted" else "$currentVolume / $maxVolume",
@@ -114,6 +124,7 @@ fun VolumeStreamCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Mute / Unmute Button
                     IconButton(onClick = onMuteToggle) {
                         Icon(
                             imageVector = volumeIcon,
@@ -122,6 +133,7 @@ fun VolumeStreamCard(
                         )
                     }
 
+                    // Lock / Unlock Stream Button
                     IconToggleButton(
                         checked = isLocked,
                         onCheckedChange = { onLockToggle() }
@@ -137,6 +149,7 @@ fun VolumeStreamCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Interactive Volume Level Slider
             Slider(
                 value = currentVolume.toFloat().coerceIn(minVolume.toFloat(), maxVolume.toFloat()),
                 onValueChange = { newValue ->
@@ -155,6 +168,9 @@ fun VolumeStreamCard(
     }
 }
 
+/**
+ * Preview for [VolumeStreamCard].
+ */
 @Preview(showBackground = true)
 @Composable
 fun VolumeStreamCardPreview() {

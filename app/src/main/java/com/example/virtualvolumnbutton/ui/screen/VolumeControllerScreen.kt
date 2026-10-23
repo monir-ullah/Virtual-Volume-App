@@ -57,17 +57,32 @@ import com.example.virtualvolumnbutton.ui.viewmodel.MainUiState
 import com.example.virtualvolumnbutton.ui.viewmodel.MainViewModel
 import com.example.virtualvolumnbutton.util.PermissionHelper
 
+/**
+ * State-aware Composable container screen for the Virtual Volume app.
+ *
+ * WHAT IT DOES:
+ * - Collects the [MainUiState] reactive flow from [MainViewModel].
+ * - Automatically re-checks permissions and volume states whenever the app screen returns to focus (`ON_RESUME`).
+ * - Displays an Exit Confirmation [AlertDialog] when the user requests to shut down all background services.
+ * - Passes UI state and event callbacks down to [VolumeControllerContent].
+ *
+ * WHY IT EXISTS:
+ * - Separates state-handling logic from purely visual rendering, enabling clean previews and unit testing.
+ */
 @Composable
 fun VolumeControllerScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
+    // Collect UI state safely with lifecycle awareness (pauses collection when screen stopped)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Local state controlling the exit confirmation dialog visibility
     var showExitConfirmationDialog by remember { mutableStateOf(false) }
 
+    // Re-check permissions & volume levels whenever the app screen comes into foreground
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -81,6 +96,7 @@ fun VolumeControllerScreen(
         }
     }
 
+    // Exit Confirmation Dialog
     if (showExitConfirmationDialog) {
         AlertDialog(
             onDismissRequest = { showExitConfirmationDialog = false },
@@ -114,6 +130,7 @@ fun VolumeControllerScreen(
         )
     }
 
+    // Render screen UI layout
     VolumeControllerContent(
         uiState = uiState,
         onRefresh = { viewModel.refreshVolumeStates() },
@@ -133,6 +150,14 @@ fun VolumeControllerScreen(
     )
 }
 
+/**
+ * Pure visual content Composable for [VolumeControllerScreen].
+ *
+ * WHAT IT DOES:
+ * - Renders a Material Design 3 screen layout with a collapsible top app bar.
+ * - Displays Permission alerts, Master Lock card, Floating Overlay Service card,
+ *   individual audio stream sliders, and an Exit App action card.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VolumeControllerContent(
@@ -148,6 +173,7 @@ fun VolumeControllerContent(
     modifier: Modifier = Modifier,
     onExitApp: () -> Unit = {}
 ) {
+    // Nested scroll behavior for collapsing top app bar on scroll
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -179,12 +205,14 @@ fun VolumeControllerContent(
                     }
                 },
                 actions = {
+                    // Manual Refresh Button
                     IconButton(onClick = onRefresh) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
                             contentDescription = "Refresh Volume States"
                         )
                     }
+                    // Exit App Button
                     IconButton(onClick = onExitApp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
@@ -207,6 +235,7 @@ fun VolumeControllerContent(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Card 1: System Permissions Warning Card (shown if permissions missing)
             item {
                 PermissionCard(
                     hasOverlayPermission = uiState.hasOverlayPermission,
@@ -216,6 +245,7 @@ fun VolumeControllerContent(
                 )
             }
 
+            // Card 2: Master Volume Lock Toggle Card
             item {
                 MasterLockCard(
                     isLocked = uiState.isMasterLockActive,
@@ -223,6 +253,7 @@ fun VolumeControllerContent(
                 )
             }
 
+            // Card 3: Floating Overlay Service Toggle Card
             item {
                 FloatingServiceCard(
                     isServiceEnabled = uiState.isFloatingServiceEnabled,
@@ -232,6 +263,7 @@ fun VolumeControllerContent(
                 )
             }
 
+            // Section Header: Audio Streams
             item {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -242,6 +274,7 @@ fun VolumeControllerContent(
                 )
             }
 
+            // Cards 4+: Individual Stream Cards (Media, Ring, Alarm, Notification)
             items(
                 count = AudioStreamType.entries.size,
                 key = { index -> AudioStreamType.entries[index].name }
@@ -260,6 +293,7 @@ fun VolumeControllerContent(
                 )
             }
 
+            // Card Last: Exit App & Stop All Services Card
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
@@ -320,6 +354,9 @@ fun VolumeControllerContent(
     }
 }
 
+/**
+ * Android Studio UI Design Preview for [VolumeControllerContent].
+ */
 @Preview(showBackground = true)
 @Composable
 fun VolumeControllerScreenPreview() {

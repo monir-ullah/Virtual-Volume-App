@@ -30,6 +30,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.virtualvolumnbutton.ui.theme.VirtualVolumnButtonTheme
 
+/**
+ * UI Warning Card prompting for missing Android system permissions.
+ *
+ * WHAT IT DOES:
+ * - Automatically displays if Overlay Draw ("Display over other apps") or Notification Policy Access is missing.
+ * - Provides direct "Grant" buttons launching system settings screens.
+ * - Automatically hides when all permissions are granted.
+ */
 @Composable
 fun PermissionCard(
     hasOverlayPermission: Boolean,
@@ -82,6 +90,7 @@ fun PermissionCard(
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
 
+                // Overlay Permission Row
                 if (!hasOverlayPermission) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -117,6 +126,7 @@ fun PermissionCard(
                     }
                 }
 
+                // Notification Policy Access Row
                 if (!hasNotificationPolicyPermission) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -156,6 +166,9 @@ fun PermissionCard(
     }
 }
 
+/**
+ * Preview for [PermissionCard].
+ */
 @Preview(showBackground = true)
 @Composable
 fun PermissionCardPreview() {

@@ -24,6 +24,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.virtualvolumnbutton.ui.theme.VirtualVolumnButtonTheme
 
+/**
+ * UI Card component for master volume lock toggling.
+ *
+ * WHAT IT DOES:
+ * - Shows overall status of the master volume lock engine.
+ * - Displays a prominent [Switch] to toggle master lock on or off across all streams.
+ */
 @Composable
 fun MasterLockCard(
     isLocked: Boolean,
@@ -89,6 +96,9 @@ fun MasterLockCard(
     }
 }
 
+/**
+ * Preview for [MasterLockCard].
+ */
 @Preview(showBackground = true)
 @Composable
 fun MasterLockCardPreview() {

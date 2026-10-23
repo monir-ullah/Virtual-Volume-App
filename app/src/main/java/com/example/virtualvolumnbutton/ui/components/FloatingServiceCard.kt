@@ -23,6 +23,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.virtualvolumnbutton.ui.theme.VirtualVolumnButtonTheme
 
+/**
+ * UI Card component for enabling/disabling the floating volume overlay service.
+ *
+ * WHAT IT DOES:
+ * - Shows current running status of [com.example.virtualvolumnbutton.service.FloatingOverlayService].
+ * - Displays a [Switch] allowing users to start or stop the floating overlay button.
+ * - Prompts for overlay permission if missing when the user toggles the switch ON.
+ */
 @Composable
 fun FloatingServiceCard(
     isServiceEnabled: Boolean,
@@ -100,6 +108,9 @@ fun FloatingServiceCard(
     }
 }
 
+/**
+ * Preview for [FloatingServiceCard].
+ */
 @Preview(showBackground = true)
 @Composable
 fun FloatingServiceCardPreview() {

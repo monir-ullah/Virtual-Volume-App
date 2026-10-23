@@ -61,6 +61,22 @@ import com.example.virtualvolumnbutton.data.model.AudioStreamType
 import com.example.virtualvolumnbutton.data.repository.VolumeRepository
 import com.example.virtualvolumnbutton.engine.VolumeLockEngine
 
+/**
+ * On-screen floating volume control widget rendered inside [com.example.virtualvolumnbutton.service.FloatingOverlayService].
+ *
+ * WHAT IT DOES:
+ * - Displays a moveable floating pill header with drag handle, stream icon, lock badge indicator,
+ *   touch Volume Down (-) button, current level text, touch Volume Up (+) button, and expand arrow button.
+ * - Expands into an interactive control panel showing stream selection chips, volume progress indicator,
+ *   mute toggle button, lock toggle button, and close overlay service button.
+ *
+ * WHY IT EXISTS:
+ * - Provides immediate on-screen volume adjustment and locking capabilities without needing to open the app or use physical buttons.
+ *
+ * HOW IT WORKS:
+ * - Detects drag gestures via `pointerInput` and `detectDragGestures` and triggers `onDrag(dx, dy)`.
+ * - Collects real-time state from [VolumeRepository] and [VolumeLockEngine] using `collectAsState()`.
+ */
 @Composable
 fun FloatingOverlayContent(
     volumeRepository: VolumeRepository,
@@ -69,10 +85,12 @@ fun FloatingOverlayContent(
     onCloseService: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Collect real-time volume levels and lock engine status
     val volumeStates by volumeRepository.volumeStates.collectAsState()
     val isMasterLock by volumeLockEngine.isLockActive.collectAsState()
     val lockedStreams by volumeLockEngine.lockedStreams.collectAsState()
 
+    // Local UI state for active stream selection and panel expansion
     var activeStream by remember { mutableStateOf(AudioStreamType.MEDIA) }
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -92,11 +110,12 @@ fun FloatingOverlayContent(
             modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header / Collapsed Pill Bar
+            // Header / Collapsed Pill Bar (always visible)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier
+                    // Intercept drag gestures and notify WindowManager to move the floating overlay window
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
@@ -105,15 +124,15 @@ fun FloatingOverlayContent(
                     }
                     .padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
-                // Drag handle icon
+                // Drag handle icon indicating the floating pill can be dragged around the screen
                 Icon(
                     imageVector = Icons.Rounded.DragHandle,
-                    contentDescription = "Drag to move",
+                    contentDescription = "Drag to move overlay",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
 
-                // Current Volume Icon
+                // Current Stream Category Icon (Media, Ring, Alarm, Notification)
                 Icon(
                     imageVector = getStreamIcon(activeStream, activeState.currentVolume, activeState.isMuted),
                     contentDescription = activeStream.label,
@@ -121,7 +140,7 @@ fun FloatingOverlayContent(
                     modifier = Modifier.size(22.dp)
                 )
 
-                // RED CIRCLE LOCK ICON BADGE when locked!
+                // Prominent Red Circle Lock Icon Badge when volume lock is active!
                 LockIconBadge(
                     isLocked = isStreamLocked,
                     onClick = {
@@ -155,7 +174,7 @@ fun FloatingOverlayContent(
                     )
                 }
 
-                // Volume Level Text
+                // Volume Level Text display
                 Text(
                     text = "${activeState.currentVolume}",
                     style = MaterialTheme.typography.titleMedium,
@@ -183,20 +202,20 @@ fun FloatingOverlayContent(
                     )
                 }
 
-                // Expand / Collapse Arrow Button
+                // Expand / Collapse Arrow Toggle Button
                 IconButton(
                     onClick = { isExpanded = !isExpanded },
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        contentDescription = if (isExpanded) "Collapse Overlay" else "Expand Overlay",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            // Expanded Controls Panel
+            // Expanded Detailed Controls Panel
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = fadeIn(),
@@ -278,13 +297,13 @@ fun FloatingOverlayContent(
                         )
                     }
 
-                    // Bottom Action Controls
+                    // Bottom Action Controls Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Toggle Mute
+                        // Toggle Mute Button
                         IconButton(
                             onClick = {
                                 volumeRepository.setMute(activeStream, !activeState.isMuted)
@@ -297,7 +316,7 @@ fun FloatingOverlayContent(
                             )
                         }
 
-                        // Toggle Stream / Master Lock
+                        // Lock Stream Toggle Card
                         ElevatedCard(
                             onClick = {
                                 if (isStreamLocked) {
@@ -333,11 +352,11 @@ fun FloatingOverlayContent(
                             }
                         }
 
-                        // Close Overlay Service Button
+                        // Close Floating Overlay Service Button
                         IconButton(onClick = onCloseService) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
-                                contentDescription = "Close Overlay",
+                                contentDescription = "Close Floating Overlay",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -350,7 +369,7 @@ fun FloatingOverlayContent(
 
 /**
  * Lock Icon Badge Component
- * Requirement: Red circle lock icon when locked!
+ * Displays a prominent red circle badge when volume lock is active.
  */
 @Composable
 fun LockIconBadge(
@@ -359,7 +378,7 @@ fun LockIconBadge(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = if (isLocked) {
-        Color(0xFFDC2626) // Prominent Red Circle
+        Color(0xFFDC2626) // Red circle badge when volume is locked
     } else {
         MaterialTheme.colorScheme.surfaceContainerHighest
     }
@@ -387,6 +406,9 @@ fun LockIconBadge(
     }
 }
 
+/**
+ * Returns the appropriate Material symbol icon for a given stream category and volume level.
+ */
 private fun getStreamIcon(streamType: AudioStreamType, level: Int, isMuted: Boolean): ImageVector {
     if (isMuted || level == 0) return Icons.AutoMirrored.Rounded.VolumeMute
     return when (streamType) {

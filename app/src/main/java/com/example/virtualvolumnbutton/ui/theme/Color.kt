@@ -2,6 +2,9 @@ package com.example.virtualvolumnbutton.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Color token definitions for the Virtual Volume application Material Design 3 theme.
+ */
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
