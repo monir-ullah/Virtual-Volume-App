@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:targetApi="25">
+    <shortcut
+        android:shortcutId="toggle_volume_lock"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_lock_label"
+        android:shortcutLongLabel="@string/shortcut_lock_long_label">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.virtualvolumnbutton"
+            android:targetClass="com.example.virtualvolumnbutton.MainActivity">
+            <extra
+                android:name="action"
+                android:value="toggle_lock" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="start_floating_overlay"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:shortcutShortLabel="@string/shortcut_overlay_label"
+        android:shortcutLongLabel="@string/shortcut_overlay_long_label">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.virtualvolumnbutton"
+            android:targetClass="com.example.virtualvolumnbutton.MainActivity">
+            <extra
+                android:name="action"
+                android:value="start_overlay" />
+        </intent>
+    </shortcut>
+</shortcuts>

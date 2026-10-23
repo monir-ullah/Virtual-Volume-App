@@ -3,13 +3,22 @@ package com.example.virtualvolumnbutton.ui.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -78,6 +88,7 @@ fun VolumeControllerScreen(
         onVolumeChange = { streamType, level -> viewModel.setVolume(streamType, level) },
         onMuteToggle = { streamType -> viewModel.toggleMute(streamType) },
         onLockToggle = { streamType -> viewModel.toggleStreamLock(streamType) },
+        onExitApp = { viewModel.exitAppAndStopServices(context) },
         modifier = modifier
     )
 }
@@ -94,7 +105,8 @@ fun VolumeControllerContent(
     onVolumeChange: (AudioStreamType, Int) -> Unit,
     onMuteToggle: (AudioStreamType) -> Unit,
     onLockToggle: (AudioStreamType) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onExitApp: () -> Unit = {}
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -131,6 +143,13 @@ fun VolumeControllerContent(
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
                             contentDescription = "Refresh Volume States"
+                        )
+                    }
+                    IconButton(onClick = onExitApp) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
+                            contentDescription = "Exit App & Stop All Services",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },
@@ -200,6 +219,63 @@ fun VolumeControllerContent(
                     onLockToggle = { onLockToggle(streamType) }
                 )
             }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Column {
+                                Text(
+                                    text = "Exit App & Stop Services",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = "Stops floating overlay, unlocks all audio streams, and closes app completely.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                        Button(
+                            onClick = onExitApp,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
+                                contentDescription = null
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Exit App & Stop All Services",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -231,7 +307,8 @@ fun VolumeControllerScreenPreview() {
             onRequestNotificationPolicyPermission = {},
             onVolumeChange = { _, _ -> },
             onMuteToggle = {},
-            onLockToggle = {}
+            onLockToggle = {},
+            onExitApp = {}
         )
     }
 }

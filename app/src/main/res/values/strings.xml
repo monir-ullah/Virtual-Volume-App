@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Virtual Volume</string>
+    <string name="volume_lock_tile_label">Lock Volume</string>
+    <string name="shortcut_lock_label">Lock Volume</string>
+    <string name="shortcut_lock_long_label">Toggle Master Volume Lock</string>
+    <string name="shortcut_overlay_label">Floating Overlay</string>
+    <string name="shortcut_overlay_long_label">Start Floating Overlay Service</string>
+    <string name="exit_app_and_stop_services">Exit App &amp; Stop All Services</string>
+    <string name="exit_app_description">Stops floating overlay service, unlocks all volume streams, and closes app completely.</string>
 </resources>

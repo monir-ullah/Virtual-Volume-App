@@ -1,6 +1,7 @@
 package com.example.virtualvolumnbutton.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
@@ -14,6 +15,7 @@ import com.example.virtualvolumnbutton.engine.VolumeLockEngine
 import com.example.virtualvolumnbutton.service.FloatingOverlayService
 import com.example.virtualvolumnbutton.service.FloatingOverlayServiceController
 import com.example.virtualvolumnbutton.util.PermissionHelper
+import com.example.virtualvolumnbutton.util.findActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -146,5 +148,17 @@ class MainViewModel @JvmOverloads constructor(
 
     fun refreshVolumeStates() {
         volumeRepository.refreshVolumeStates()
+    }
+
+    fun exitAppAndStopServices(context: Context) {
+        val intent = Intent(context, FloatingOverlayService::class.java).apply {
+            action = FloatingOverlayService.ACTION_STOP
+        }
+        context.stopService(intent)
+
+        volumeLockEngine.disableLock()
+        volumeLockEngine.stop()
+
+        context.findActivity()?.finishAndRemoveTask()
     }
 }

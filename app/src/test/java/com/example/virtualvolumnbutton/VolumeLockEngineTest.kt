@@ -114,4 +114,40 @@ class VolumeLockEngineTest {
 
         assertEquals(3, fakeRepository.getVolumeState(AudioStreamType.MEDIA).currentVolume)
     }
+
+    @Test
+    fun testDisableLockUnlocksAllStreams() {
+        lockEngine.enableLock()
+        assertTrue(lockEngine.isLockActive.value)
+
+        lockEngine.disableLock()
+        assertFalse(lockEngine.isLockActive.value)
+        assertTrue(lockEngine.lockedStreams.value.isEmpty())
+        assertTrue(lockEngine.lockedVolumes.value.isEmpty())
+    }
+
+    @Test
+    fun testLockIndividualStream() {
+        lockEngine.lockStream(AudioStreamType.MEDIA, 12)
+
+        assertTrue(lockEngine.isLockActive.value)
+        assertTrue(lockEngine.isStreamLocked(AudioStreamType.MEDIA))
+        assertEquals(12, lockEngine.getLockedVolume(AudioStreamType.MEDIA))
+        assertFalse(lockEngine.isStreamLocked(AudioStreamType.RING))
+    }
+
+    @Test
+    fun testUnlockIndividualStream() {
+        lockEngine.lockStream(AudioStreamType.MEDIA, 12)
+        lockEngine.lockStream(AudioStreamType.RING, 8)
+
+        lockEngine.unlockStream(AudioStreamType.MEDIA)
+
+        assertFalse(lockEngine.isStreamLocked(AudioStreamType.MEDIA))
+        assertTrue(lockEngine.isStreamLocked(AudioStreamType.RING))
+        assertTrue(lockEngine.isLockActive.value)
+
+        lockEngine.unlockStream(AudioStreamType.RING)
+        assertFalse(lockEngine.isLockActive.value)
+    }
 }

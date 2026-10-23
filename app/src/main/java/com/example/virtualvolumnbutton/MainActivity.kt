@@ -1,5 +1,6 @@
 package com.example.virtualvolumnbutton
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleShortcutIntent(intent)
         setContent {
             VirtualVolumnButtonTheme {
                 Surface(
@@ -28,6 +30,25 @@ class MainActivity : ComponentActivity() {
                 ) {
                     VolumeControllerScreen(viewModel = viewModel)
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShortcutIntent(intent)
+    }
+
+    private fun handleShortcutIntent(intent: Intent?) {
+        val action = intent?.getStringExtra("action") ?: return
+        when (action) {
+            "toggle_lock" -> {
+                val isLocked = viewModel.uiState.value.isMasterLockActive
+                viewModel.toggleMasterLock(!isLocked)
+            }
+            "start_overlay" -> {
+                viewModel.setFloatingServiceEnabled(true)
             }
         }
     }
