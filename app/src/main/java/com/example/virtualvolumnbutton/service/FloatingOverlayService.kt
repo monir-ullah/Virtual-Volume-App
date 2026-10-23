@@ -4,7 +4,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
@@ -55,6 +54,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         FloatingOverlayServiceController.setRunning(true)
         createNotificationChannel()
         startForegroundServiceWithNotification()
+        ensureVolumeLockEngineStarted()
         setupOverlayView()
     }
 
@@ -65,6 +65,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                 return START_NOT_STICKY
             }
             else -> {
+                ensureVolumeLockEngineStarted()
                 if (overlayView == null) {
                     setupOverlayView()
                 }
@@ -161,6 +162,9 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         val app = application as? VirtualVolumeApp
         val volumeRepository = app?.volumeRepository ?: VolumeRepositoryImpl(this)
         val volumeLockEngine = app?.volumeLockEngine ?: VolumeLockEngine(volumeRepository)
+        app?.let {
+            it.volumeLockEngine.start(it.applicationScope)
+        }
 
         overlayView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@FloatingOverlayService)
@@ -217,6 +221,13 @@ class FloatingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             }
         }
         overlayView = null
+    }
+
+    private fun ensureVolumeLockEngineStarted() {
+        val app = application as? VirtualVolumeApp
+        app?.let {
+            it.volumeLockEngine.start(it.applicationScope)
+        }
     }
 
     companion object {

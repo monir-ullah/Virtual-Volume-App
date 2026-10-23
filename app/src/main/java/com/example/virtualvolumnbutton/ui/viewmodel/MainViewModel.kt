@@ -74,7 +74,9 @@ class MainViewModel @JvmOverloads constructor(
     )
 
     init {
-        volumeLockEngine.start(viewModelScope)
+        (getApplication<Application>() as? VirtualVolumeApp)?.let { app ->
+            app.volumeLockEngine.start(app.applicationScope)
+        }
 
         viewModelScope.launch {
             volumeRepository.observeVolumeChanges().collect {
